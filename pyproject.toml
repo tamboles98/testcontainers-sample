@@ -1,0 +1,45 @@
+[project]
+name = "review_app"
+description = "Sample FastAPI project to test Testcontainers"
+version = "0.1.0"
+authors = [
+    { name = "Santiago Cebellán", email = "tamboles98@gmail.com" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+# This are loose dependencies, exact versions are handled by pipenv
+dependencies = [
+    "fastapi",
+    "sqlalchemy",
+]
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0", "wheel>=0.37.1"]
+
+[tool.setuptools]
+packages = ["review_app"]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+docstring-code-format = true
