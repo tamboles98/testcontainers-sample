@@ -6,42 +6,47 @@ class UserBase(pydantic.BaseModel):
     name: str
     age: int | None
 
+
 class UserCreate(UserBase):
     pass
 
-class User(UserBase):
-    id: int
-    reviews : list['Review'] = []
 
-    class Config:
-        orm_mode = True
+class User(UserBase):
+    model_config = pydantic.ConfigDict(from_attributes=True)
+
+    id: int
+    # reviews: list['Review'] = []
+
 
 # MediaType --------------------------------------------------------------------
 class MediaTypeBase(pydantic.BaseModel):
     name: str
 
+
 class MediaTypeCreate(MediaTypeBase):
     pass
 
+
 class MediaType(MediaTypeBase):
+    model_config = pydantic.ConfigDict(from_attributes=True)
     id: int
 
-    class Config:
-        orm_mode = True
 
 # Author -----------------------------------------------------------------------
 class AuthorBase(pydantic.BaseModel):
     name: str
     alive: bool
 
+
 class AuthorCreate(AuthorBase):
     pass
 
+
 class Author(AuthorBase):
+    model_config = pydantic.ConfigDict(from_attributes=True)
+
     id: int
 
-    class Config:
-        orm_mode = True
 
 # Media ------------------------------------------------------------------------
 class MediaBase(pydantic.BaseModel):
@@ -49,16 +54,18 @@ class MediaBase(pydantic.BaseModel):
     media_type_id: int
     author_id: int | None
 
+
 class MediaCreate(MediaBase):
     pass
 
+
 class Media(MediaBase):
+    model_config = pydantic.ConfigDict(from_attributes=True)
+
     id: int
     media_type: MediaType
     author: Author | None
 
-    class Config:
-        orm_mode = True
 
 # Review -----------------------------------------------------------------------
 class ReviewBase(pydantic.BaseModel):
@@ -67,13 +74,14 @@ class ReviewBase(pydantic.BaseModel):
     rating: int
     review: str
 
+
 class ReviewCreate(ReviewBase):
     pass
 
+
 class Review(ReviewBase):
+    model_config = pydantic.ConfigDict(from_attributes=True)
+
     id: int
     media: Media
     user: User
-
-    class Config:
-        orm_mode = True

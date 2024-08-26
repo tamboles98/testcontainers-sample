@@ -22,13 +22,13 @@ class DatabaseService:
 
     # User -----------------------------------------------------------------------
     def create_user(self, user: pm.UserCreate) -> pm.User:
-        sql_user = sqlm.User(name=user.name, email=user.age)
+        sql_user = sqlm.User(name=user.name, age=user.age)
         self.session.add(sql_user)
         self.session.commit()
         self.session.refresh(sql_user)
         return pm.User.model_validate(sql_user)
 
-    def get_user(self, user_id: int) -> pm.User | None:
+    def get_user(self, user_id: int) -> pm.User:
         sql_user = self.session.query(sqlm.User).get(user_id)
         if sql_user is None:
             raise NotFoundError(f'User with id {user_id} not found')
