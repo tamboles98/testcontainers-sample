@@ -29,13 +29,13 @@ class DatabaseService:
         return pm.User.model_validate(sql_user)
 
     def get_user(self, user_id: int) -> pm.User:
-        sql_user = self.session.query(sqlm.User).get(user_id)
+        sql_user = self.session.get(sqlm.User, user_id)
         if sql_user is None:
             raise NotFoundError(f'User with id {user_id} not found')
         return pm.User.model_validate(sql_user)
 
     def get_user_reviews(self, user_id: int) -> list[pm.Review]:
-        sql_user = self.session.query(sqlm.User).get(user_id)
+        sql_user = self.session.get(sqlm.User, user_id)
         if sql_user is None:
             raise NotFoundError(f'User with id {user_id} not found')
         return [pm.Review.model_validate(review) for review in sql_user.reviews]
@@ -48,12 +48,12 @@ class DatabaseService:
             rating=review.rating,
             review=review.review,
         )
-        self.session.add(review)
+        self.session.add(sql_review)
         self.session.commit()
         return pm.Review.model_validate(sql_review)
 
     def get_review(self, review_id: int) -> pm.Review:
-        sql_review = self.session.query(sqlm.Review).get(review_id)
+        sql_review = self.session.get(sqlm.Review, review_id)
         if sql_review is None:
             raise NotFoundError(f'Review with id {review_id} not found')
         return pm.Review.model_validate(sql_review)

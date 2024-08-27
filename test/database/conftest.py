@@ -6,8 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from testcontainers.postgres import PostgresContainer
 
-from review_app.database.models import Author, Base, Media, MediaType, Review, User
-from test.database.initializer_helper import DatabaseItems
+from review_app.database.models import Base
+from test.database.initializer_helper import DatabaseItems, InitializationType
 
 if ty.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -53,23 +53,45 @@ def database_session(_database_setup: 'Engine') -> ty.Generator[Session, None, N
 
 
 @pytest.fixture
-def minimal_initiated_database(database_session: Session) -> DatabaseItems:
-    def create_objects() -> DatabaseItems:
-        user = User(name='John Doe', age=25)
-        media_type = MediaType(name='Book')
-        author = Author(name='Jane Smith', alive=True)
-        media = Media(title='The Great Gatsby', media_type=media_type, author=author)
-        review = Review(media=media, user=user, rating=5, review='Great book!')
+def basic_database(database_session: Session) -> DatabaseItems:
+    database_objects = InitializationType.BASIC.initialize()
 
-        return DatabaseItems(
-            users=[user],
-            media_types=[media_type],
-            authors=[author],
-            media=[media],
-            reviews=[review],
-        )
-
-    objects = create_objects()
-    database_session.add_all(objects.to_list())
+    database_session.add_all(database_objects.to_list())
     database_session.commit()
-    return objects
+    return database_objects
+
+
+@pytest.fixture
+def empty_database(database_session: Session) -> DatabaseItems:
+    database_objects = InitializationType('empty').initialize()
+
+    database_session.add_all(database_objects.to_list())
+    database_session.commit()
+    return database_objects
+
+
+@pytest.fixture
+def noreview_database(database_session: Session) -> DatabaseItems:
+    database_objects = InitializationType.NOREVIEW.initialize()
+
+    database_session.add_all(database_objects.to_list())
+    database_session.commit()
+    return database_objects
+
+
+@pytest.fixture
+def nomedia_database(database_session: Session) -> DatabaseItems:
+    database_objects = InitializationType.NOMEDIA.initialize()
+
+    database_session.add_all(database_objects.to_list())
+    database_session.commit()
+    return database_objects
+
+
+@pytest.fixture
+def rich_database(database_session: Session) -> DatabaseItems:
+    database_objects = InitializationType.RICH.initialize()
+
+    database_session.add_all(database_objects.to_list())
+    database_session.commit()
+    return database_objects
