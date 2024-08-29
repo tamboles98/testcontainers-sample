@@ -70,7 +70,7 @@ class DatabaseService:
         return pm.Media.model_validate(sql_media)
 
     def get_media(self, media_id: int) -> pm.Media:
-        sql_media = self.session.query(sqlm.Media).get(media_id)
+        sql_media = self.session.get(sqlm.Media, media_id)
         if sql_media is None:
             raise NotFoundError(f'Media with id {media_id} not found')
         return pm.Media.model_validate(sql_media)
@@ -83,7 +83,7 @@ class DatabaseService:
         return pm.MediaType.model_validate(sql_media_type)
 
     def get_media_type(self, media_type_id: int) -> pm.MediaType:
-        sql_media_type = self.session.query(sqlm.MediaType).get(media_type_id)
+        sql_media_type = self.session.get(sqlm.MediaType, media_type_id)
         if sql_media_type is None:
             raise NotFoundError(f'MediaType with id {media_type_id} not found')
         return pm.MediaType.model_validate(sql_media_type)
