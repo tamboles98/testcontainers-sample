@@ -89,9 +89,7 @@ class DatabaseService:
         return pm.MediaType.model_validate(sql_media_type)
 
     def get_media_type_by_name(self, name: str) -> pm.MediaType:
-        sql_media_type = (
-            self.session.query(sqlm.MediaType).filter(sqlm.MediaType.name == name).first()
-        )
+        sql_media_type = self.session.query(sqlm.MediaType).filter(sqlm.MediaType.name == name).first()
         if sql_media_type is None:
             raise NotFoundError(f'MediaType with name {name} not found')
         return pm.MediaType.model_validate(sql_media_type)
