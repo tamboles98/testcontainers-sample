@@ -1,7 +1,7 @@
 [project]
 name = "review_app"
 description = "Sample FastAPI project to test Testcontainers"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     { name = "Santiago Cebellán", email = "tamboles98@gmail.com" }
 ]
