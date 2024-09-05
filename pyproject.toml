@@ -47,3 +47,11 @@ indent-width = 4
 quote-style = "single"
 indent-style = "space"
 docstring-code-format = true
+
+[tool.coverage.run]
+include = ["src/*"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true
