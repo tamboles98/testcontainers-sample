@@ -17,6 +17,7 @@ pytest = "*"
 build = "*"
 review-app = {file = ".", editable = true}
 psycopg2-binary = "*"
+coverage = "*"
 
 [requires]
 python_version = "3.12"
