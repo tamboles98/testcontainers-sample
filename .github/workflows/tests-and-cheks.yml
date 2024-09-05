@@ -35,4 +35,14 @@ jobs:
         ruff check
     - name: Test with pytest
       run: |
-        pytest test/
+        # Run test and save coverage
+        coverage run -m pytest test/
+    - name: Generate coverage report
+      run: |
+        # Generate the coverage report
+        coverage report > coverage.txt
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-coverage-report
+        path: coverage.txt
