@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 import review_app.database.models as sqlm  # sqlm = sql models
-import review_app.models as pm  # pm = pydantic models
+import review_app.schemas as pm  # pm = pydantic models
 from review_app.database import database
 
 
