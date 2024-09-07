@@ -5,7 +5,10 @@ create fixtures that mock different behaviours of the database service. Each fix
 maps to a method in the database service and is parametrized to simulate all the possible
 outcomes of the method. All fixtures return the a MockedResult object that contains the
 status of the mock, the result, the error (if any), and a description of the behaviour.
-The tests will use these fixtures to test the different behaviours of the main module."""
+The tests will use these fixtures to test the different behaviours of the main module.
+
+The calls to the methods in the main module are done through the TestClient, which will
+simulate requests to the API."""
 
 import typing as ty
 from dataclasses import dataclass
@@ -13,10 +16,13 @@ from enum import Enum
 from unittest.mock import MagicMock, create_autospec
 
 import pytest
+from fastapi.testclient import TestClient
 
 import review_app.main as main
 from review_app import schemas
 from review_app.database import service
+
+client = TestClient(main.app)
 
 
 class MockStatus(Enum):
@@ -45,6 +51,20 @@ def mock_db_service():
     return database_service
 
 
+@pytest.fixture(autouse=True)
+def patch_db_service(monkeypatch: ty.Any, mock_db_service: MagicMock):
+    """Patch the database service dependency in the main module to use the mock.
+    This way when doing requests to the TestClient, the mocked database service will
+    be used instead of the real one."""
+
+    def database_service_creator():
+        return mock_db_service
+
+    monkeypatch.setitem(
+        main.app.dependency_overrides, main.service.DatabaseService.create_database_service, database_service_creator
+    )
+
+
 @pytest.fixture
 def patch_db_create_user(mock_db_service: MagicMock):
     def create_user(user: schemas.UserCreate) -> schemas.User:
@@ -66,8 +86,6 @@ def patch_db_get_user(request, mock_db_service: service.DatabaseService):
         return MockedResult(status=MockStatus.ERROR, error=error)
 
 
-# Tests -----------------------------------------------------------------------
-# User ------------------------------------------------------------------------
 @pytest.fixture(params=['success', 'empty', 'not_found'])
 def patch_db_get_user_reviews(request: ty.Any, mock_db_service: MagicMock):
     if request.param == 'success':
@@ -90,36 +108,41 @@ def patch_db_get_user_reviews(request: ty.Any, mock_db_service: MagicMock):
         return MockedResult(status=MockStatus.ERROR, error=error, description='User not found')
 
 
-def test_create_user(mock_db_service: MagicMock, patch_db_create_user: MockedResult):
+# Tests -----------------------------------------------------------------------
+# User ------------------------------------------------------------------------
+def test_create_user(patch_db_create_user: MockedResult):
     user = schemas.UserCreate(name='John Doe', age=25)
-    created_user = main.create_user(user, db=mock_db_service)
+    response = client.post('/users/', json=user.model_dump())
+    assert response.status_code == 200
+    created_user = schemas.User(**response.json())
     assert isinstance(created_user.id, int)
     assert created_user.name == 'John Doe'
     assert created_user.age == 25
 
 
-def test_read_user(mock_db_service: MagicMock, patch_db_get_user: MockedResult):
+def test_read_user(patch_db_get_user: MockedResult):
+    response = client.get('/users/1')
     if patch_db_get_user.status == MockStatus.SUCCESS:
-        user = main.read_user(1, db=mock_db_service)
+        assert response.status_code == 200
+        user = user = schemas.User(**response.json())
         assert user.id == 1
     else:
-        with pytest.raises(main.HTTPException) as exc_info:
-            main.read_user(1, db=mock_db_service)
-            assert exc_info.value.status_code == 404
+        assert response.status_code == 404
 
 
-def test_read_user_reviews(mock_db_service: MagicMock, patch_db_get_user_reviews: MockedResult):
+def test_read_user_reviews(patch_db_get_user_reviews: MockedResult):
+    response = client.get('/users/1/reviews')
     if patch_db_get_user_reviews.status == MockStatus.SUCCESS:
-        reviews = main.read_user_reviews(1, db=mock_db_service)
+        assert response.status_code == 200
+        reviews = [schemas.Review(**review) for review in response.json()]
         assert len(reviews) == 1
         assert all(isinstance(review, schemas.Review) for review in reviews)
     elif patch_db_get_user_reviews.status == MockStatus.EMPTY:
-        reviews = main.read_user_reviews(1, db=mock_db_service)
+        assert response.status_code == 200
+        reviews = [schemas.Review(**review) for review in response.json()]
         assert len(reviews) == 0
     else:
-        with pytest.raises(main.HTTPException) as exc_info:
-            main.read_user_reviews(1, db=mock_db_service)
-            assert exc_info.value.status_code == 404
+        assert response.status_code == 404
 
 
 # MediaType --------------------------------------------------------------------
@@ -144,21 +167,23 @@ def patch_db_get_media_type(request: ty.Any, mock_db_service: MagicMock):
         return MockedResult(status=MockStatus.ERROR, error=error)
 
 
-def test_create_media_type(mock_db_service: MagicMock, patch_db_create_media_type: MockedResult):
+def test_create_media_type(patch_db_create_media_type: MockedResult):
     media_type = schemas.MediaTypeCreate(name='Movie')
-    created_media_type = main.create_media_type(media_type, db=mock_db_service)
+    response = client.post('/media_types/', json=media_type.model_dump())
+    assert response.status_code == 200
+    created_media_type = schemas.MediaType(**response.json())
     assert isinstance(created_media_type.id, int)
     assert created_media_type.name == 'Movie'
 
 
-def test_read_media_type(mock_db_service: MagicMock, patch_db_get_media_type: MockedResult):
+def test_read_media_type(patch_db_get_media_type: MockedResult):
+    response = client.get('/media_types/1')
     if patch_db_get_media_type.status == MockStatus.SUCCESS:
-        media_type = main.read_media_type(1, db=mock_db_service)
-        assert media_type.id == 1
+        assert response.status_code == 200
+        media_type = schemas.MediaType(**response.json())
+        assert isinstance(media_type.id, int)
     else:
-        with pytest.raises(main.HTTPException) as exc_info:
-            main.read_media_type(1, db=mock_db_service)
-            assert exc_info.value.status_code == 404
+        assert response.status_code == 404
 
 
 # Media ----------------------------------------------------------------------
@@ -192,9 +217,11 @@ def patch_db_get_media(request, mock_db_service: service.DatabaseService):
         return MockedResult(status=MockStatus.ERROR, error=error)
 
 
-def test_create_media(mock_db_service: MagicMock, patch_db_create_media: MockedResult):
+def test_create_media(patch_db_create_media: MockedResult):
     media = schemas.MediaCreate(title='Test Media', media_type_id=1, author_id=1)
-    created_media = main.create_media(media, db=mock_db_service)
+    response = client.post('/media/', json=media.model_dump())
+    assert response.status_code == 200
+    created_media = schemas.Media(**response.json())
     assert isinstance(created_media.id, int)
     assert created_media.title == 'Test Media'
     assert created_media.media_type_id == 1
@@ -202,16 +229,16 @@ def test_create_media(mock_db_service: MagicMock, patch_db_create_media: MockedR
 
 
 def test_read_media(mock_db_service: MagicMock, patch_db_get_media: MockedResult):
+    response = client.get('/media/1')
     if patch_db_get_media.status == MockStatus.SUCCESS:
-        media = main.read_media(1, db=mock_db_service)
+        assert response.status_code == 200
+        media = schemas.Media(**response.json())
         assert media.id == 1
         assert media.title == 'Test Media'
         assert media.media_type_id == 1
         assert media.author_id == 1
     else:
-        with pytest.raises(main.HTTPException) as exc_info:
-            main.read_media(1, db=mock_db_service)
-            assert exc_info.value.status_code == 404
+        assert response.status_code == 404
 
 
 # Reviews ---------------------------------------------------------------------
@@ -254,9 +281,11 @@ def patch_db_get_review(request, mock_db_service: service.DatabaseService):
         return MockedResult(status=MockStatus.ERROR, error=error)
 
 
-def test_create_review(mock_db_service: MagicMock, patch_db_create_review: MockedResult):
+def test_create_review(patch_db_create_review: MockedResult):
     review = schemas.ReviewCreate(media_id=1, user_id=1, rating=5, review='Great movie')
-    created_review = main.create_review(review, db=mock_db_service)
+    response = client.post('/reviews/', json=review.model_dump())
+    assert response.status_code == 200
+    created_review = schemas.Review(**response.json())
     assert isinstance(created_review.id, int)
     assert created_review.media_id == 1
     assert created_review.user_id == 1
@@ -264,18 +293,18 @@ def test_create_review(mock_db_service: MagicMock, patch_db_create_review: Mocke
     assert created_review.review == 'Great movie'
 
 
-def test_read_review(mock_db_service: MagicMock, patch_db_get_review: MockedResult):
+def test_read_review(patch_db_get_review: MockedResult):
+    response = client.get('/reviews/1')
     if patch_db_get_review.status == MockStatus.SUCCESS:
-        review = main.read_review(1, db=mock_db_service)
+        assert response.status_code == 200
+        review = schemas.Review(**response.json())
         assert review.id == 1
         assert review.media_id == 1
         assert review.user_id == 1
         assert review.rating == 5
         assert review.review == 'Great movie'
     else:
-        with pytest.raises(main.HTTPException) as exc_info:
-            main.read_review(1, db=mock_db_service)
-            assert exc_info.value.status_code == 404
+        assert response.status_code == 404
 
 
 # Author ---------------------------------------------------------------------
@@ -321,36 +350,38 @@ def patch_db_get_author_highest_rated_media(request: ty.Any, mock_db_service: Ma
         return MockedResult(status=MockStatus.ERROR, error=error, description='Author not found')
 
 
-def test_create_author(mock_db_service: MagicMock, patch_db_create_author: MockedResult):
+def test_create_author(patch_db_create_author: MockedResult):
     author = schemas.AuthorCreate(name='Test Author', alive=True)
-    created_author = main.create_author(author, db=mock_db_service)
+    response = client.post('/authors/', json=author.model_dump())
+    assert response.status_code == 200
+    created_author = schemas.Author(**response.json())
     assert isinstance(created_author.id, int)
     assert created_author.name == 'Test Author'
     assert created_author.alive is True
 
 
-def test_read_author(mock_db_service: MagicMock, patch_db_get_author: MockedResult):
+def test_read_author(patch_db_get_author: MockedResult):
+    response = client.get('/authors/1')
     if patch_db_get_author.status == MockStatus.SUCCESS:
-        author = main.read_author(1, db=mock_db_service)
+        assert response.status_code == 200
+        author = schemas.Author(**response.json())
         assert author.id == 1
         assert author.name == 'Test Author'
         assert author.alive is True
     else:
-        with pytest.raises(main.HTTPException) as exc_info:
-            main.read_author(1, db=mock_db_service)
-            assert exc_info.value.status_code == 404
+        assert response.status_code == 404
 
 
 def test_read_author_highest_rated_media(
     mock_db_service: MagicMock, patch_db_get_author_highest_rated_media: MockedResult
 ):
+    response = client.get('/authors/1/highest_rated_media')
     if patch_db_get_author_highest_rated_media.status == MockStatus.SUCCESS:
-        media = main.read_author_highest_rated_media(1, db=mock_db_service)
+        assert response.status_code == 200
+        media = schemas.Media(**response.json())
         assert media.id == 1
         assert media.title == 'Test Media'
         assert media.media_type_id == 1
         assert media.author_id == 1
     else:
-        with pytest.raises(main.HTTPException) as exc_info:
-            main.read_author_highest_rated_media(1, db=mock_db_service)
-            assert exc_info.value.status_code == 404
+        assert response.status_code == 404

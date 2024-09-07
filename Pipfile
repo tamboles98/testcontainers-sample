@@ -4,8 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-fastapi = "*"
 sqlalchemy = "*"
+fastapi = {extras = ["standard"], version = "*"}
 
 [dev-packages]
 testcontainers = {extras = ["mssql"], version = "*"}
