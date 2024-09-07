@@ -2,7 +2,7 @@ import typing as ty
 
 import pytest
 
-import review_app.models as pmodels
+import review_app.schemas as pmodels
 from review_app.database.service import DatabaseService, NotFoundError
 
 if ty.TYPE_CHECKING:
@@ -40,18 +40,14 @@ def test_get_user_reviews(basic_database: 'DatabaseItems', database_session: 'Se
     assert all(isinstance(review, pmodels.Review) for review in res_reviews)
 
 
-def test_get_user_reviews_missing_review(
-    noreview_database: 'DatabaseItems', database_session: 'Session'
-):
+def test_get_user_reviews_missing_review(noreview_database: 'DatabaseItems', database_session: 'Session'):
     user = noreview_database.users[0]
     db_service = DatabaseService(database_session)
     res_reviews = db_service.get_user_reviews(user_id=user.id)
     assert len(res_reviews) == 0
 
 
-def test_get_user_reviews_missing_user(
-    empty_database: 'DatabaseItems', database_session: 'Session'
-):
+def test_get_user_reviews_missing_user(empty_database: 'DatabaseItems', database_session: 'Session'):
     db_service = DatabaseService(database_session)
     with pytest.raises(NotFoundError):
         db_service.get_user_reviews(user_id=1)
@@ -60,9 +56,7 @@ def test_get_user_reviews_missing_user(
 def test_create_review(basic_database: 'DatabaseItems', database_session: 'Session'):
     user = basic_database.users[0]
     media = basic_database.media[0]
-    review = pmodels.ReviewCreate(
-        media_id=media.id, user_id=user.id, rating=3, review='Too much water'
-    )
+    review = pmodels.ReviewCreate(media_id=media.id, user_id=user.id, rating=3, review='Too much water')
     db_service = DatabaseService(database_session)
     res_review = db_service.create_review(review)
     assert res_review.id is not None
@@ -85,9 +79,7 @@ def test_get_missing_review(empty_database: 'DatabaseItems', database_session: '
 def test_create_media(basic_database: 'DatabaseItems', database_session: 'Session'):
     media_type = basic_database.media_types[0]
     author = basic_database.authors[0]
-    media = pmodels.MediaCreate(
-        title='The Hobbit', media_type_id=media_type.id, author_id=author.id
-    )
+    media = pmodels.MediaCreate(title='The Hobbit', media_type_id=media_type.id, author_id=author.id)
     db_service = DatabaseService(database_session)
     res_media = db_service.create_media(media)
     assert res_media.id is not None
@@ -135,9 +127,7 @@ def test_get_media_type_by_name(basic_database: 'DatabaseItems', database_sessio
     assert media_type.id == res_media_type.id
 
 
-def test_get_missing_media_type_by_name(
-    empty_database: 'DatabaseItems', database_session: 'Session'
-):
+def test_get_missing_media_type_by_name(empty_database: 'DatabaseItems', database_session: 'Session'):
     db_service = DatabaseService(database_session)
     with pytest.raises(NotFoundError):
         db_service.get_media_type_by_name('book')
@@ -164,9 +154,7 @@ def test_get_missing_author(empty_database: 'DatabaseItems', database_session: '
         db_service.get_author(author_id=1)
 
 
-def test_get_author_highest_rated_media(
-    rich_database: 'DatabaseItems', database_session: 'Session'
-):
+def test_get_author_highest_rated_media(rich_database: 'DatabaseItems', database_session: 'Session'):
     author = rich_database.authors[1]  # J.R.R. Tolkien
     db_service = DatabaseService(database_session)
     res_media = db_service.get_author_highest_rated_media(author_id=author.id)
@@ -177,26 +165,20 @@ def test_get_author_highest_rated_media(
     assert res_media.media_type_id == expected_media.media_type_id
 
 
-def test_get_author_highest_rated_media_no_review(
-    noreview_database: 'DatabaseItems', database_session: 'Session'
-):
+def test_get_author_highest_rated_media_no_review(noreview_database: 'DatabaseItems', database_session: 'Session'):
     author = noreview_database.authors[0]
     db_service = DatabaseService(database_session)
     with pytest.raises(NotFoundError):
         db_service.get_author_highest_rated_media(author_id=author.id)
 
 
-def test_get_author_highest_rated_media_missing_author(
-    empty_database: 'DatabaseItems', database_session: 'Session'
-):
+def test_get_author_highest_rated_media_missing_author(empty_database: 'DatabaseItems', database_session: 'Session'):
     db_service = DatabaseService(database_session)
     with pytest.raises(NotFoundError):
         db_service.get_author_highest_rated_media(author_id=1)
 
 
-def test_get_author_highest_rated_media_no_media(
-    nomedia_database: 'DatabaseItems', database_session: 'Session'
-):
+def test_get_author_highest_rated_media_no_media(nomedia_database: 'DatabaseItems', database_session: 'Session'):
     author = nomedia_database.authors[0]
     db_service = DatabaseService(database_session)
     with pytest.raises(NotFoundError):
